@@ -1,0 +1,843 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Prompt Engineering Memo</title>
+    <meta
+      name="description"
+      content="A stylish student memo for prompt engineering: LLM basics, tokens, and practical prompting techniques."
+    />
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;700;800&family=Space+Grotesk:wght@500;700&family=IBM+Plex+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
+      crossorigin="anonymous"
+      referrerpolicy="no-referrer"
+    />
+
+    <style>
+      :root {
+        --bg: #fdfcf9;
+        --paper: #ffffff;
+        --ink: #151515;
+        --muted: #5d5d5d;
+        --line: #ece8df;
+        --teal: #11b5a4;
+        --orange: #ff7a00;
+        --blue: #0f87ff;
+        --shadow-soft: 0 18px 45px rgba(30, 30, 30, 0.08);
+        --radius-lg: 26px;
+        --radius-md: 16px;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html {
+        scroll-behavior: smooth;
+      }
+
+      body {
+        margin: 0;
+        color: var(--ink);
+        font-family: "Manrope", sans-serif;
+        background:
+          radial-gradient(circle at 15% 0%, rgba(17, 181, 164, 0.12), transparent 32%),
+          radial-gradient(circle at 88% 16%, rgba(15, 135, 255, 0.09), transparent 26%),
+          radial-gradient(circle at 78% 78%, rgba(255, 122, 0, 0.09), transparent 30%),
+          var(--bg);
+      }
+
+      .bg-grid {
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        z-index: -1;
+        background-image:
+          linear-gradient(to right, rgba(20, 20, 20, 0.03) 1px, transparent 1px),
+          linear-gradient(to bottom, rgba(20, 20, 20, 0.03) 1px, transparent 1px);
+        background-size: 40px 40px;
+        mask-image: radial-gradient(circle at center, black 35%, transparent 75%);
+      }
+
+      .container {
+        width: min(1120px, 92vw);
+        margin: 0 auto;
+      }
+
+      .top-nav {
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        backdrop-filter: blur(10px);
+        background: rgba(253, 252, 249, 0.78);
+        border-bottom: 1px solid var(--line);
+      }
+
+      .top-nav-inner {
+        width: min(1120px, 92vw);
+        margin: 0 auto;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.75rem 0;
+        gap: 1rem;
+      }
+
+      .brand {
+        font-family: "Space Grotesk", sans-serif;
+        font-size: 0.95rem;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+      }
+
+      .brand i {
+        color: var(--orange);
+      }
+
+      .nav-links {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.6rem;
+      }
+
+      .nav-links a {
+        text-decoration: none;
+        color: var(--ink);
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        padding: 0.35rem 0.75rem;
+        font-size: 0.84rem;
+        font-weight: 700;
+        transition: all 0.2s ease;
+        background: rgba(255, 255, 255, 0.6);
+      }
+
+      .nav-links a:hover {
+        transform: translateY(-2px);
+        border-color: #d8d3c7;
+      }
+
+      .hero {
+        padding: 5.5rem 0 2.5rem;
+      }
+
+      .hero-card {
+        background: var(--paper);
+        border: 1px solid var(--line);
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-soft);
+        padding: clamp(1.4rem, 2.1vw, 2.2rem);
+        position: relative;
+        overflow: hidden;
+      }
+
+      .hero-card::before,
+      .hero-card::after {
+        content: "";
+        position: absolute;
+        border-radius: 999px;
+        filter: blur(1px);
+      }
+
+      .hero-card::before {
+        width: 250px;
+        height: 250px;
+        top: -90px;
+        right: -60px;
+        background: radial-gradient(circle, rgba(17, 181, 164, 0.2), transparent 72%);
+      }
+
+      .hero-card::after {
+        width: 260px;
+        height: 260px;
+        bottom: -120px;
+        left: -70px;
+        background: radial-gradient(circle, rgba(255, 122, 0, 0.2), transparent 70%);
+      }
+
+      .eyebrow {
+        font-family: "IBM Plex Mono", monospace;
+        font-size: 0.8rem;
+        color: var(--muted);
+        text-transform: uppercase;
+        letter-spacing: 0.12em;
+      }
+
+      h1,
+      h2,
+      h3 {
+        margin: 0;
+        line-height: 1.15;
+      }
+
+      h1 {
+        margin-top: 0.7rem;
+        font-family: "Space Grotesk", sans-serif;
+        font-size: clamp(2rem, 5vw, 3.6rem);
+      }
+
+      .hero-sub {
+        margin: 1rem 0 1.4rem;
+        font-size: clamp(1rem, 1.55vw, 1.2rem);
+        color: #2e2e2e;
+        max-width: 74ch;
+      }
+
+      .chip-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.55rem;
+      }
+
+      .chip {
+        border: 1px solid #ddd6c8;
+        background: #fff;
+        border-radius: 999px;
+        padding: 0.38rem 0.72rem;
+        font-size: 0.85rem;
+        font-weight: 700;
+      }
+
+      .section {
+        padding: 1.2rem 0 0.4rem;
+      }
+
+      .section-card {
+        background: var(--paper);
+        border: 1px solid var(--line);
+        border-radius: var(--radius-lg);
+        padding: clamp(1.2rem, 2vw, 1.8rem);
+      }
+
+      .section-title {
+        font-family: "Space Grotesk", sans-serif;
+        font-size: clamp(1.45rem, 2vw, 2.1rem);
+      }
+
+      .section-lead {
+        margin-top: 0.7rem;
+        max-width: 80ch;
+        color: var(--muted);
+      }
+
+      .grid-two {
+        margin-top: 1rem;
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0.9rem;
+      }
+
+      .fact {
+        border: 1px solid var(--line);
+        border-radius: var(--radius-md);
+        padding: 1rem;
+        background: linear-gradient(175deg, rgba(255, 255, 255, 0.95), rgba(250, 248, 244, 0.95));
+      }
+
+      .seminar-figure {
+        margin-top: 1rem;
+        border: 1px solid var(--line);
+        border-radius: var(--radius-md);
+        overflow: hidden;
+        background: #fff;
+        box-shadow: 0 12px 28px rgba(20, 20, 20, 0.06);
+      }
+
+      .seminar-slice {
+        display: block;
+        width: 100%;
+        height: auto;
+      }
+
+      .seminar-note {
+        margin: 0;
+        padding: 0.7rem 0.9rem;
+        border-top: 1px solid var(--line);
+        background: #fcfbf8;
+        color: var(--muted);
+        font-size: 0.86rem;
+      }
+
+      .llm-figure .seminar-slice {
+        width: min(100%, 760px);
+        aspect-ratio: 3 / 4;
+        margin: 0 auto;
+      }
+
+      .fact h3 {
+        font-size: 1.06rem;
+        display: flex;
+        gap: 0.45rem;
+        align-items: center;
+      }
+
+      .fact p {
+        margin: 0.6rem 0 0;
+        color: var(--muted);
+        line-height: 1.58;
+      }
+
+      .fact i {
+        font-size: 0.95rem;
+      }
+
+      .techniques {
+        margin-top: 1rem;
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0.95rem;
+      }
+
+      .tech {
+        background: var(--paper);
+        border: 1px solid var(--line);
+        border-radius: var(--radius-md);
+        padding: 1rem 1rem 1.05rem;
+        box-shadow: 0 10px 28px rgba(20, 20, 20, 0.05);
+        transition: transform 0.25s ease, box-shadow 0.25s ease;
+        opacity: 0;
+        transform: translateY(14px);
+      }
+
+      .tech.visible {
+        opacity: 1;
+        transform: translateY(0);
+      }
+
+      .tech:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 18px 36px rgba(20, 20, 20, 0.08);
+      }
+
+      .tech h3 {
+        display: flex;
+        align-items: center;
+        gap: 0.55rem;
+        font-size: 1.02rem;
+      }
+
+      .tech .badge {
+        font-family: "IBM Plex Mono", monospace;
+        font-size: 0.73rem;
+        letter-spacing: 0.04em;
+        color: #414141;
+        border: 1px solid #dfdbd0;
+        border-radius: 8px;
+        padding: 0.16rem 0.34rem;
+      }
+
+      .tech p {
+        margin: 0.55rem 0 0.75rem;
+        color: var(--muted);
+      }
+
+      .label {
+        display: inline-block;
+        margin: 0.35rem 0 0.4rem;
+        font-size: 0.76rem;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: #5f5f5f;
+        font-weight: 800;
+      }
+
+      pre {
+        margin: 0.2rem 0 0.65rem;
+        border: 1px solid #e8e3d8;
+        background: linear-gradient(180deg, #fff, #f9f7f1);
+        padding: 0.75rem;
+        border-radius: 12px;
+        overflow-x: auto;
+        font-family: "IBM Plex Mono", monospace;
+        font-size: 0.78rem;
+        line-height: 1.45;
+      }
+
+      code {
+        font-family: "IBM Plex Mono", monospace;
+      }
+
+      .why {
+        padding: 0.55rem 0.6rem;
+        border-left: 3px solid #dad4c7;
+        background: #fcfbf8;
+        border-radius: 8px;
+        font-size: 0.9rem;
+      }
+
+      .cheat {
+        margin-top: 1.2rem;
+      }
+
+      .flow {
+        margin-top: 0.8rem;
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 0.7rem;
+      }
+
+      .step {
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        padding: 0.85rem;
+        background: #fff;
+      }
+
+      .step .num {
+        font-family: "IBM Plex Mono", monospace;
+        font-size: 0.72rem;
+        color: #555;
+      }
+
+      .step h4 {
+        margin: 0.4rem 0 0.45rem;
+        font-size: 0.96rem;
+      }
+
+      .step p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 0.91rem;
+      }
+
+      footer {
+        padding: 2.5rem 0 3.2rem;
+        color: #5f5f5f;
+        font-size: 0.9rem;
+      }
+
+      .dot {
+        width: 0.45rem;
+        height: 0.45rem;
+        display: inline-block;
+        border-radius: 50%;
+        margin-right: 0.4rem;
+      }
+
+      .orange {
+        background: var(--orange);
+      }
+
+      .blue {
+        background: var(--blue);
+      }
+
+      .teal {
+        background: var(--teal);
+      }
+
+      @media (max-width: 980px) {
+        .grid-two,
+        .techniques {
+          grid-template-columns: 1fr;
+        }
+
+        .flow {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+      }
+
+      @media (max-width: 640px) {
+        .top-nav-inner {
+          flex-direction: column;
+          align-items: flex-start;
+        }
+
+        .flow {
+          grid-template-columns: 1fr;
+        }
+
+        .hero {
+          padding-top: 4.4rem;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="bg-grid"></div>
+
+    <nav class="top-nav">
+      <div class="top-nav-inner">
+        <div class="brand"><i class="fa-solid fa-sparkles"></i> Prompt Engineering Memo</div>
+        <div class="nav-links">
+          <a href="#intro">Intro</a>
+          <a href="#llm">LLM</a>
+          <a href="#tokens">Tokens</a>
+          <a href="#techniques">Techniques</a>
+        </div>
+      </div>
+    </nav>
+
+    <header class="hero container">
+      <div class="hero-card">
+        <p class="eyebrow">Memo</p>
+        <h1>Prompt Engineering</h1>
+        <p class="hero-sub">
+          A practical seminar memo for writing stronger prompts with LLMs: from message structure and
+          token thinking to few-shot, anti-hallucination, chaining, tools, and retrieval.
+        </p>
+        <div class="chip-row">
+          <span class="chip"><span class="dot orange"></span>Clear Prompts</span>
+          <span class="chip"><span class="dot teal"></span>Reliable Outputs</span>
+          <span class="chip"><span class="dot blue"></span>Production Thinking</span>
+        </div>
+      </div>
+    </header>
+
+    <main class="container">
+      <section class="section" id="intro">
+        <div class="section-card">
+          <h2 class="section-title">Introduction</h2>
+          <p class="section-lead">
+            Prompt engineering is the practice of designing instructions and context so an LLM gives accurate,
+            useful, and structured outputs. Treat prompts as testable artifacts: iterate, measure, and refine.
+          </p>
+        </div>
+      </section>
+
+      <section class="section" id="llm">
+        <div class="section-card">
+          <h2 class="section-title">What Is an LLM?</h2>
+          <p class="section-lead">
+            A Large Language Model predicts the next token based on your current text, prior messages, and patterns
+            learned during training. It does not "know" truth by default; it predicts plausible continuations.
+          </p>
+          <!-- Чтобы контролировать соотношение сторон и обрезку (crop) SVG, обернём SVG во flex-бокс с определённым aspect-ratio.
+               Для aspect-ratio используем inline-стиль или CSS-класс, а SVG растянется по размеру контейнера и будет обрезан по viewBox.
+               Используем overflow: hidden, чтобы ничего не вылезало.
+          -->
+          <figure class="seminar-figure llm-figure" style="aspect-ratio: 16/9; width: 100%; max-width: 1000px; margin: auto; display: flex; align-items: center; justify-content: center; overflow: hidden; border-radius: 18px; box-shadow: 0 4px 18px rgba(30,30,30,0.05);">
+            <svg
+              class="seminar-slice"
+              viewBox="520 300 3600 1380"
+              preserveAspectRatio="xMidYMid slice"
+              aria-label="LLM concept illustration from seminar materials"
+              role="img"
+              style="width: 100%; height: 100%; object-fit: cover; display: block;"
+            >
+              <image href="PE_seminar.svg" x="0" y="0" width="5400" height="1800"></image>
+            </svg>
+          </figure>
+
+          <div class="grid-two">
+            <article class="fact">
+              <h3><i class="fa-solid fa-message teal"></i> Chat API Mental Model</h3>
+              <p>
+                Most chat systems use a message list with roles: <code>system</code>, <code>user</code>,
+                <code>assistant</code>. Use a system prompt for global behavior. Keep message order valid and
+                coherent.
+              </p>
+            </article>
+            <article class="fact">
+              <h3><i class="fa-solid fa-sliders orange"></i> Key Parameters</h3>
+              <p>
+                <code>max_tokens</code> limits generation length, and <code>temperature</code> controls variability.
+                Lower temperature is usually better for deterministic tasks and grading-like outputs.
+              </p>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="tokens">
+        <div class="section-card">
+          <h2 class="section-title">How LLMs Understand Language (Tokens)</h2>
+          <p class="section-lead">
+            LLMs read and produce tokens, not pure words. A token can be a whole word, part of a word, punctuation,
+            or whitespace. Both prompt and output consume tokens.
+          </p>
+          <div class="grid-two">
+            <article class="fact">
+              <h3><i class="fa-solid fa-cubes blue"></i> Why Tokens Matter</h3>
+              <p>
+                Token limits constrain context size and output length. Long prompts can push out important context
+                from earlier messages.
+              </p>
+            </article>
+            <article class="fact">
+              <h3><i class="fa-solid fa-ruler-combined teal"></i> Practical Rule</h3>
+              <p>
+                Keep prompts explicit but compact. Use clear delimiters, structured output, and examples instead of
+                long ambiguous prose.
+              </p>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="techniques">
+        <div class="section-card">
+          <h2 class="section-title">Prompt Engineering Techniques</h2>
+          <p class="section-lead">
+            Each technique follows the same pattern: what to do, an example, and why it works.
+          </p>
+
+          <div class="techniques">
+            <article class="tech">
+              <h3><i class="fa-solid fa-layer-group teal"></i> 1. System Prompting & Message Structure <span class="badge">core</span></h3>
+              <p>Set global behavior in the system prompt and keep turns well-formed.</p>
+              <span class="label">Example</span>
+              <pre><code>SYSTEM_PROMPT = "Your answer should always be a series of critical thinking questions..."
+PROMPT = "Why is the sky blue?"
+
+ASSISTANT:
+1) What role does sunlight play in the sky's color?
+2) How do different wavelengths interact with the atmosphere?
+3) Why do shorter wavelengths scatter more strongly?</code></pre>
+              <div class="why">Why it works: it establishes top-level rules before task-level instructions.</div>
+            </article>
+
+            <article class="tech">
+              <h3><i class="fa-solid fa-crosshairs orange"></i> 2. Clear & Direct Instructions <span class="badge">specificity</span></h3>
+              <p>State constraints explicitly and remove room for interpretation.</p>
+              <span class="label">Example</span>
+              <pre><code>PROMPT = "Write a haiku about robots."
+PROMPT = "Write a haiku about robots. Skip the preamble; go straight into the poem."
+
+ASSISTANT:
+Metal world,
+Strange hands toil —
+No heart can be seen here.
+</code></pre>
+              <div class="why">Why it works: ambiguity decreases; format drift decreases.</div>
+            </article>
+
+            <article class="tech">
+              <h3><i class="fa-solid fa-user-gear blue"></i> 3. Role Prompting <span class="badge">style+reasoning</span></h3>
+              <p>Assign a role and, if needed, a target audience.</p>
+              <span class="label">Example</span>
+              <pre><code>SYSTEM_PROMPT = "You are a cat."
+PROMPT = "In one sentence, what do you think about skateboarding?"
+
+ASSISTANT:
+"Skateboarding is fun and exciting ... while keeping my claws sharp!"</code></pre>
+              <div class="why">Why it works: role priors shape tone, depth, and decision style.</div>
+            </article>
+
+            <article class="tech">
+              <h3><i class="fa-solid fa-table-cells-large teal"></i> 4. Prompt Templates + Variables <span class="badge">reuse</span></h3>
+              <p>Separate prompt skeleton from variable input data.</p>
+              <span class="label">Example</span>
+              <pre><code>ANIMAL = "Cow"
+PROMPT = f"I will tell you the name of an animal.
+Please respond with the noise that animal makes. {ANIMAL}"
+
+ASSISTANT:
+Moo (муу)</code></pre>
+              <div class="why">Why it works: consistent structure improves scalability and reliability.</div>
+            </article>
+
+            <article class="tech">
+              <h3><i class="fa-solid fa-code teal"></i> 5. Delimiters with XML Tags <span class="badge">boundaries</span></h3>
+              <p>Wrap raw input with tags to separate instructions from data.</p>
+              <span class="label">Example</span>
+              <pre><code>EMAIL = "Show up at 6am tomorrow because I'm the CEO and I say so."
+PROMPT = f"Yo GigaChat. &lt;email&gt;{EMAIL}&lt;/email&gt;
+&lt;----- Make this email more polite but don't change anything else."
+
+ASSISTANT:
+"Good morning, could you kindly confirm you'll be available
+for our meeting tomorrow at 6 am? ..."</code></pre>
+              <div class="why">Why it works: the model can parse exact start/end boundaries.</div>
+            </article>
+
+            <article class="tech">
+              <h3><i class="fa-solid fa-brackets-curly orange"></i> 6. Structured Output + Prefill <span class="badge">format control</span></h3>
+              <p>Request XML/JSON output and optionally start the assistant format yourself.</p>
+              <span class="label">Example</span>
+              <pre><code>PROMPT = f"Please write a haiku about {ANIMAL}. Put it in &lt;haiku&gt; tags."
+PREFILL = "&lt;haiku&gt;"
+
+ASSISTANT:
+Soft paws pad the floor,
+Whispers of fur and grace,
+Purr's lullaby soars.&lt;/haiku&gt;</code></pre>
+              <div class="why">Why it works: tighter shape control and easier parsing by code.</div>
+            </article>
+
+            <article class="tech">
+              <h3><i class="fa-solid fa-shoe-prints blue"></i> 7. Step-by-Step Reasoning <span class="badge">hard tasks</span></h3>
+              <p>Ask for intermediate reasoning before final output.</p>
+              <span class="label">Example</span>
+              <pre><code>PROMPT = "Name a famous movie starring an actor born in 1956.
+First brainstorm about some actors and their birth years in
+&lt;brainstorm&gt; tags, then give your answer."
+
+ASSISTANT:
+&lt;brainstorm&gt;
+- Tom Cruise: 1962
+- Johnny Depp: 1963
+- Denzel Washington: 1954
+...
+- Andy Garcia: 1956 (matches the criteria!)
+&lt;/brainstorm&gt;
+
+Final answer:
+Andy Garcia.</code></pre>
+              <div class="why">Why it works: decomposition reduces reasoning errors on complex inputs.</div>
+            </article>
+
+            <article class="tech">
+              <h3><i class="fa-solid fa-clone orange"></i> 8. Few-Shot Prompting <span class="badge">learn by examples</span></h3>
+              <p>Provide input-output examples matching your target behavior.</p>
+              <span class="label">Example</span>
+              <pre><code>PROMPT = """Please complete the conversation by writing
+the next line, speaking as "A".
+Q: Is the tooth fairy real?
+A: Of course, sweetie...
+Q: Will Santa bring me presents on Christmas?
+A:"""
+
+ASSISTANT:
+"Absolutely, honey - if you've been good all year!
+Leave milk and cookies for Santa..."</code></pre>
+              <div class="why">Why it works: pattern completion from examples is often stronger than abstract instructions.</div>
+            </article>
+
+            <article class="tech">
+              <h3><i class="fa-solid fa-shield-halved teal"></i> 9. Hallucination Reduction <span class="badge">safety</span></h3>
+              <p>Allow uncertainty and require evidence-first answering.</p>
+              <span class="label">Example</span>
+              <pre><code>PROMPT = "Who is the heaviest hippo of all time?"
+ASSISTANT: "The heaviest known hippopotamus was a male hippo named Tonkie"        
+
+PROMPT = "Who is the heaviest hippo of all time?
+Only answer if you know the answer with certainty."
+ASSISTANT:
+"No reliable exact record..."</code></pre>
+              <div class="why">Why it works: reduces pressure to fabricate and anchors answers in source text.</div>
+            </article>
+
+            <article class="tech">
+              <h3><i class="fa-solid fa-diagram-project blue"></i> 10. Complex Prompt Blueprint <span class="badge">large tasks</span></h3>
+              <p>Compose prompts in reusable blocks for difficult workflows.</p>
+              <span class="label">Example</span>
+              <pre><code>TASK_CONTEXT = "You will be acting as an AI career coach named Joe..."
+TONE_CONTEXT = "You should maintain a friendly customer service tone."
+TASK_DESCRIPTION = "Always stay in character..."
+EXAMPLES = "&lt;example&gt;Customer: ... Joe: ...&lt;/example&gt;"
+INPUT_DATA = "&lt;history&gt;...&lt;/history&gt;&lt;question&gt;...&lt;/question&gt;"
+OUTPUT_FORMATTING = "Put your response in &lt;response&gt;&lt;/response&gt; tags."
+PREFILL = "[Joe] &lt;response&gt;"
+
+ASSISTANT:
+"Both careers can start with a bachelor's degree,
+but social work often requires a master's for clinical licensing..."</code></pre>
+              <div class="why">Why it works: clearer structure lowers instruction collisions.</div>
+            </article>
+
+            <article class="tech">
+              <h3><i class="fa-solid fa-link orange"></i> 11. Prompt Chaining <span class="badge">iterative quality</span></h3>
+              <p>Split generation, critique, and revision into multiple calls.</p>
+              <span class="label">Example</span>
+              <pre><code>first_user = "Name ten words that end with 'ab'."
+first_response = get_completion([...])
+
+second_user = "Please find replacements for all 'words' that are not real words."
+messages = [... first_response ...]
+
+ASSISTANT step 1:
+1. Snub
+...
+7. Clamb
+...
+9. Fluffab
+...
+10. Whiffab
+
+ASSISTANT step 2:
+Replaced non-words: Clamb -&gt;
+Clamshell, Fluffab -&gt; Fluff,
+Whiffab -&gt; Whiff.</code></pre>
+              <div class="why">Why it works: generation and verification are distinct cognitive tasks.</div>
+            </article>
+
+            <article class="tech">
+              <h3><i class="fa-solid fa-wrench teal"></i> 12. Tool Use / Function Calling <span class="badge">ground truth</span></h3>
+              <p>Let the model request tools, execute externally, then feed results back.</p>
+              <span class="label">Example</span>
+              <pre><code>USER: "Multiply 1,984,135 by 9,343,116"
+SYSTEM: You can invoke one or more functions by writing a "&lt;function_calls&gt;" block like the following as part of your reply to the user:
+
+&lt;function_calls&gt;
+  &lt;invoke name="$FUNCTION_NAME"&gt;
+    &lt;antml:parameter name="$PARAMETER_NAME"&gt;$PARAMETER_VALUE&lt;/antml:parameter&gt;
+    ...
+  &lt;/invoke&gt;
+
+  &lt;invoke name="$FUNCTION_NAME2"&gt;
+    ...
+  &lt;/invoke&gt;
+&lt;/function_calls&gt;
+
+ASSISTANT:
+&lt;function_calls&gt;
+&lt;function name="calculator"&gt;
+&lt;parameter name="first_operand" value="1984135"/&gt;
+&lt;parameter name="second_operand" value="9343116"/&gt;
+&lt;parameter name="operator" value="multiply"/&gt;
+&lt;/function&gt;
+&lt;/function_calls&gt;</code></pre>
+              <div class="why">Why it works: external tools add deterministic capabilities (math, DB, APIs).</div>
+            </article>
+
+            <article class="tech">
+              <h3><i class="fa-solid fa-magnifying-glass blue"></i> 13. Search & Retrieval (RAG) <span class="badge">fresh knowledge</span></h3>
+              <p>Inject retrieved sources into context and require citations.</p>
+              <span class="label">Example</span>
+              <pre><code>PROMPT = """Use only the provided sources and answer with citations.
+Calculate the growth in the number of Matterport subscribers between December 2018 and December 2022. Give your answer as a number inside &lt;answer&gt; tags.
+&lt;question&gt;What was the subscriber growth for Matterport from December 2018 to December 2022?&lt;/question&gt;
+&lt;document&gt;
+....document content....
+&lt;/document&gt;
+"""
+
+ASSISTANT:
+&lt;quotes&gt;
+[1] Matterport had 20,000 subscribers in December 2018.
+[2] Matterport had 981,000 subscribers in December 2022.
+&lt;/quotes&gt;
+&lt;answer&gt;Growth = 961,000.&lt;/answer&gt;</code></pre>
+              <div class="why">Why it works: augments model memory with relevant, up-to-date domain text.</div>
+            </article>
+          </div>
+        </div>
+      </section>
+
+    </main>
+
+    <script>
+      const cards = document.querySelectorAll(".tech");
+      const observer = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((entry) => {
+            if (entry.isIntersecting) {
+              entry.target.classList.add("visible");
+              observer.unobserve(entry.target);
+            }
+          });
+        },
+        { threshold: 0.12 }
+      );
+
+      cards.forEach((card, index) => {
+        card.style.transitionDelay = `${Math.min(index * 28, 300)}ms`;
+        observer.observe(card);
+      });
+    </script>
+  </body>
+</html>
