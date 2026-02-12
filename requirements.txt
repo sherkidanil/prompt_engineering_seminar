@@ -1,2 +1,29 @@
+# GigaChat & env
 gigachat
 python-dotenv
+
+# LangChain
+langchain
+langchain-community
+langchain-core
+langchain-huggingface
+pydantic>=1.10.13,<3
+
+# Vector store & embeddings
+faiss-cpu
+sentence-transformers
+
+# Retrievers
+rank_bm25
+
+# Document loaders (web, PDF, CSV)
+beautifulsoup4
+requests
+playwright
+unstructured[all-docs]
+pdfminer.six
+pi_heif
+
+# Data & notebook
+pandas
+ipython
