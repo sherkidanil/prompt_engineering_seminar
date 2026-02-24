@@ -16,3 +16,4 @@ langchain-mcp-adapters==0.1.14
 mcp>=1.9.2
 rich>=13.0
 httpx>=0.28
+parsel>=1.9
