@@ -1,0 +1,18 @@
+# Notebook runtime
+jupyter
+ipykernel
+
+# Core GigaChat API usage (Function Calling seminar)
+gigachat
+python-dotenv>=1.0
+requests>=2.31
+
+# LangChain/GigaChat function-agent integration
+langchain-gigachat>=0.3,<0.4
+langgraph>=1.0,<2.0
+langchain-mcp-adapters==0.1.14
+
+# MCP seminar
+mcp>=1.9.2
+rich>=13.0
+httpx>=0.28
