@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import ast
 import importlib.util
 import re
 from pathlib import Path
@@ -7,13 +8,29 @@ from types import ModuleType
 
 import nbformat
 
-from interactive_seminar.schemas import Block, Part, SeminarManifest
+from interactive_seminar.schemas import Block, BlockField, Part, SeminarManifest
 
 
 EXERCISE_HEADING_RE = re.compile(r"^###\s+(Exercise.+)$", re.MULTILINE)
 EXAMPLE_HEADING_RE = re.compile(r"^###\s+(Example.+)$", re.MULTILINE)
 PART_HEADING_RE = re.compile(r"^##\s+(Part\s+\d+)\s*$", re.MULTILINE)
 HINT_IMPORT_RE = re.compile(r"from\s+hints\s+import\s+([A-Za-z0-9_, ]+)")
+EDITABLE_FIELD_NAMES = {
+    "PROMPT",
+    "SYSTEM_PROMPT",
+    "PREFILL",
+    "TASK_CONTEXT",
+    "TONE_CONTEXT",
+    "INPUT_DATA",
+    "EXAMPLES",
+    "TASK_DESCRIPTION",
+    "IMMEDIATE_TASK",
+    "PRECOGNITION",
+    "OUTPUT_FORMATTING",
+}
+SPECIAL_EDITABLE_FIELD_NAMES = {
+    "system_prompt_tools_specific_tools_sql",
+}
 
 
 def load_manifest(notebook_path: str, hints_path: str) -> SeminarManifest:
@@ -65,8 +82,11 @@ def _build_block(
 ) -> Block:
     instructions = []
     notebook_cell_indexes = []
+    editable_fields: list[BlockField] = []
+    readonly_fields: list[BlockField] = []
     hint_text = None
     solution_text = None
+    seen_field_names: set[str] = set()
 
     for cell_index, cell in section_cells:
         if cell.cell_type == "markdown":
@@ -87,6 +107,14 @@ def _build_block(
             continue
 
         notebook_cell_indexes.append(cell_index)
+        for field in _extract_assignment_fields(cell.source):
+            if field.name in seen_field_names:
+                continue
+            seen_field_names.add(field.name)
+            if field.editable:
+                editable_fields.append(field)
+            else:
+                readonly_fields.append(field)
 
     kind = "example"
     if title.startswith("Exercise"):
@@ -103,6 +131,8 @@ def _build_block(
         notebook_path=str(notebook_file),
         notebook_cell_indexes=notebook_cell_indexes,
         instructions_markdown="\n\n".join(part for part in instructions if part),
+        editable_fields=editable_fields,
+        readonly_fields=readonly_fields,
         hint=hint_text,
         solution=solution_text,
     )
@@ -124,7 +154,7 @@ def _find_next_block_boundary(cells: list[object], start_index: int) -> int:
         cell = cells[index]
         if cell.cell_type == "markdown":
             stripped = cell.source.strip()
-            if stripped.startswith("### ") or PART_HEADING_RE.search(stripped):
+            if stripped.startswith("### ") or stripped.startswith("## ") or stripped.startswith("---"):
                 return index
         index += 1
     return len(cells)
@@ -163,3 +193,29 @@ def _match_first_line(pattern: re.Pattern[str], source: str) -> str | None:
 def _slugify(text: str) -> str:
     slug = re.sub(r"[^a-z0-9]+", "-", text.lower()).strip("-")
     return slug
+
+
+def _extract_assignment_fields(source: str) -> list[BlockField]:
+    try:
+        tree = ast.parse(source)
+    except SyntaxError:
+        return []
+
+    fields: list[BlockField] = []
+    for node in tree.body:
+        if not isinstance(node, ast.Assign):
+            continue
+        if len(node.targets) != 1 or not isinstance(node.targets[0], ast.Name):
+            continue
+        name = node.targets[0].id
+        if not (name.isupper() or name in SPECIAL_EDITABLE_FIELD_NAMES):
+            continue
+        value_source = ast.get_source_segment(source, node.value) or ""
+        fields.append(
+            BlockField(
+                name=name,
+                value=value_source.strip(),
+                editable=name in EDITABLE_FIELD_NAMES or name in SPECIAL_EDITABLE_FIELD_NAMES,
+            )
+        )
+    return fields

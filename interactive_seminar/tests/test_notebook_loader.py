@@ -24,3 +24,21 @@ def test_manifest_marks_graded_exercises_correctly():
     }
     assert 'exercise-1-1-counting-to-three' in graded_ids
     assert 'exercise-8-1-prospectus-hallucination' in graded_ids
+
+
+def test_manifest_exposes_part9_scaffold_fields():
+    manifest = load_manifest('PE_seminar.ipynb', 'hints.py')
+    block = manifest.block('exercise-9-1-financial-services-chatbot')
+    editable_names = [field.name for field in block.editable_fields]
+    assert editable_names == [
+        'TASK_CONTEXT',
+        'TONE_CONTEXT',
+        'INPUT_DATA',
+        'EXAMPLES',
+        'TASK_DESCRIPTION',
+        'IMMEDIATE_TASK',
+        'PRECOGNITION',
+        'OUTPUT_FORMATTING',
+        'PREFILL',
+        'PROMPT',
+    ]

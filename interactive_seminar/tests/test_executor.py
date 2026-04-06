@@ -48,3 +48,19 @@ def test_execute_graded_block_returns_grade():
 
     assert result.response == '1 2 3'
     assert result.grade.passed is True
+
+
+def test_execute_open_block_returns_compiled_prompt():
+    manifest = load_manifest('PE_seminar.ipynb', 'hints.py')
+    block = manifest.block('exercise-9-2-codebot')
+
+    result = execute_block(
+        block,
+        {'TASK_CONTEXT': 'You are Codebot.'},
+        FakeRunner(),
+        credentials='test-key',
+        model='GigaChat',
+    )
+
+    assert 'You are Codebot.' in result.prompt_preview
+    assert result.grade is None
