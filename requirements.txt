@@ -1,6 +1,13 @@
 # GigaChat & env
 gigachat
 python-dotenv
+fastapi
+uvicorn
+jinja2
+nbformat
+markdown
+pytest
+httpx
 
 # LangChain
 langchain
