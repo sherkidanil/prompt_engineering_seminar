@@ -66,6 +66,25 @@ def test_execute_open_block_returns_compiled_prompt():
     assert result.grade is None
 
 
+def test_execute_example_section_bootstraps_notebook_chat_symbols():
+    manifest = load_manifest('PE_seminar.ipynb', 'hints.py')
+    block = manifest.block('part-1-examples')
+
+    result = execute_block(
+        block,
+        {
+            'PROMPT': {'__raw__': '"Hi GigaChat, how are you?"'},
+            'SYSTEM_PROMPT': {'__raw__': '""'},
+        },
+        FakeRunner(),
+        credentials='test-key',
+        model='GigaChat',
+    )
+
+    assert 'NameError' not in result.stdout
+    assert 'unhandled' in result.stdout
+
+
 class FakeToolRunner:
     def __init__(self):
         self.calls = 0

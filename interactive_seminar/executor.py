@@ -5,6 +5,7 @@ import io
 import json
 import re
 from contextlib import redirect_stdout
+from dataclasses import dataclass
 from pathlib import Path
 
 import nbformat
@@ -64,9 +65,15 @@ def execute_block(
         raise FileNotFoundError(f"Notebook file not found: {notebook_path}")
 
     notebook = nbformat.read(notebook_path, as_version=4)
+    client = _NotebookClientProxy(runner, credentials=credentials, model=model)
     namespace = {
         "__name__": "__interactive_seminar__",
         "re": re,
+        "Chat": NotebookChat,
+        "Messages": NotebookMessage,
+        "MessagesRole": NotebookMessagesRole,
+        "client": client,
+        "MODEL_NAME": model,
     }
 
     def get_completion(prompt_or_messages, system_prompt: str = "", prefill: str = "", stop_sequences=None):
@@ -124,6 +131,63 @@ def execute_block(
 
 def _line_col_to_offset(lines: list[str], lineno: int, col_offset: int) -> int:
     return sum(len(line) for line in lines[: lineno - 1]) + col_offset
+
+
+class NotebookMessagesRole:
+    SYSTEM = "system"
+    USER = "user"
+    ASSISTANT = "assistant"
+
+
+@dataclass
+class NotebookMessage:
+    role: str
+    content: str
+
+
+@dataclass
+class NotebookChat:
+    model: str
+    max_tokens: int
+    temperature: float
+    messages: list[NotebookMessage]
+
+
+@dataclass
+class _NotebookChoiceMessage:
+    content: str
+
+
+@dataclass
+class _NotebookChoice:
+    message: _NotebookChoiceMessage
+
+
+@dataclass
+class _NotebookResponse:
+    choices: list[_NotebookChoice]
+
+
+class _NotebookClientProxy:
+    def __init__(self, runner, *, credentials: str, model: str):
+        self._runner = runner
+        self._credentials = credentials
+        self._model = model
+
+    def chat(self, chat: NotebookChat) -> _NotebookResponse:
+        messages = [
+            {"role": message.role, "content": message.content}
+            for message in chat.messages
+        ]
+        text = self._runner.run(
+            credentials=self._credentials,
+            model=chat.model or self._model,
+            prompt_or_messages=messages,
+            system_prompt="",
+            prefill="",
+            stop_sequences=None,
+        )
+        return _NotebookResponse(choices=[_NotebookChoice(message=_NotebookChoiceMessage(content=text))])
 
 
 def find_parameter(message: str, parameter_name: str) -> str | None:
