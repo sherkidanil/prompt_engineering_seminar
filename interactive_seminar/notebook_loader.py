@@ -47,7 +47,7 @@ def load_manifest(notebook_path: str, hints_path: str) -> SeminarManifest:
                 next_index = _find_next_block_boundary(notebook.cells, index + 1)
                 section_indexes = list(range(index, next_index))
                 section_cells = [(i, notebook.cells[i]) for i in section_indexes]
-                block = _build_block(block_title, section_cells, hints_module)
+                block = _build_block(block_title, section_cells, hints_module, notebook_file)
                 current_part.blocks.append(block)
                 index = next_index
                 continue
@@ -57,7 +57,12 @@ def load_manifest(notebook_path: str, hints_path: str) -> SeminarManifest:
     return manifest
 
 
-def _build_block(title: str, section_cells: list[tuple[int, object]], hints_module: ModuleType) -> Block:
+def _build_block(
+    title: str,
+    section_cells: list[tuple[int, object]],
+    hints_module: ModuleType,
+    notebook_file: Path,
+) -> Block:
     instructions = []
     notebook_cell_indexes = []
     hint_text = None
@@ -95,6 +100,7 @@ def _build_block(title: str, section_cells: list[tuple[int, object]], hints_modu
         id=_slugify(title),
         title=title,
         kind=kind,
+        notebook_path=str(notebook_file),
         notebook_cell_indexes=notebook_cell_indexes,
         instructions_markdown="\n\n".join(part for part in instructions if part),
         hint=hint_text,
