@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Interactive Prompt Engineering Seminar</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">Local Notebook Runner</p>
+          <h1>Interactive Prompt Engineering Seminar</h1>
+        </div>
+        <div class="mode-switch">
+          <button id="show-seminar" class="mode-button active" type="button">Seminar</button>
+          <button id="show-sandbox" class="mode-button" type="button">Sandbox</button>
+        </div>
+      </header>
+
+      <section class="settings-panel">
+        <label>
+          <span>GigaChat API Key</span>
+          <input id="api-key" type="password" placeholder="Paste API key" />
+        </label>
+        <label>
+          <span>Model</span>
+          <input id="model-name" type="text" value="GigaChat" />
+        </label>
+        <button id="test-connection" type="button">Test Connection</button>
+        <span id="connection-status" class="status-text"></span>
+      </section>
+
+      <main id="seminar-view" class="workspace">
+        <aside class="sidebar">
+          <h2>Seminar Blocks</h2>
+          <div id="navigation"></div>
+        </aside>
+
+        <section class="content-panel">
+          <div id="block-content" class="panel-card"></div>
+        </section>
+
+        <aside class="runner-panel">
+          <div id="block-runner" class="panel-card"></div>
+        </aside>
+      </main>
+
+      <section id="sandbox-view" class="sandbox hidden">
+        <div class="sandbox-grid">
+          <div class="panel-card">
+            <h2>Sandbox</h2>
+            <label>
+              <span>System Prompt</span>
+              <textarea id="sandbox-system" rows="6"></textarea>
+            </label>
+            <label>
+              <span>User Prompt</span>
+              <textarea id="sandbox-user" rows="10"></textarea>
+            </label>
+            <label>
+              <span>Assistant Prefill</span>
+              <textarea id="sandbox-prefill" rows="4"></textarea>
+            </label>
+            <label>
+              <span>Stop Sequences</span>
+              <input id="sandbox-stop" type="text" placeholder="comma,separated,values" />
+            </label>
+            <button id="run-sandbox" type="button">Run Sandbox</button>
+          </div>
+
+          <div class="panel-card">
+            <h2>Sandbox Output</h2>
+            <div id="sandbox-output"></div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <script src="/static/app.js"></script>
+  </body>
+</html>

@@ -3,6 +3,7 @@ from __future__ import annotations
 import ast
 import importlib.util
 import re
+import warnings
 from pathlib import Path
 from types import ModuleType
 
@@ -64,6 +65,22 @@ def load_manifest(notebook_path: str, hints_path: str) -> SeminarManifest:
                 index = 228
                 continue
 
+            if current_part and source.startswith("### Examples"):
+                next_index = _find_next_block_boundary(notebook.cells, index + 1)
+                section_indexes = list(range(index, next_index))
+                section_cells = [(i, notebook.cells[i]) for i in section_indexes]
+                current_part.blocks.append(
+                    _build_block(
+                        f"{current_part.title} Examples",
+                        section_cells,
+                        hints_module,
+                        notebook_file,
+                        kind_override="example_section",
+                    )
+                )
+                index = next_index
+                continue
+
             block_title = _match_first_line(EXERCISE_HEADING_RE, source) or _match_first_line(EXAMPLE_HEADING_RE, source)
             if current_part and block_title:
                 next_index = _find_next_block_boundary(notebook.cells, index + 1)
@@ -84,6 +101,7 @@ def _build_block(
     section_cells: list[tuple[int, object]],
     hints_module: ModuleType,
     notebook_file: Path,
+    kind_override: str | None = None,
 ) -> Block:
     instructions = []
     notebook_cell_indexes = []
@@ -121,8 +139,8 @@ def _build_block(
             else:
                 readonly_fields.append(field)
 
-    kind = "example"
-    if title.startswith("Exercise"):
+    kind = kind_override or "example"
+    if kind_override is None and title.startswith("Exercise"):
         kind = "exercise_graded" if any(
             "def grade_exercise" in cell.source
             for _, cell in section_cells
@@ -202,7 +220,9 @@ def _slugify(text: str) -> str:
 
 def _extract_assignment_fields(source: str) -> list[BlockField]:
     try:
-        tree = ast.parse(source)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", SyntaxWarning)
+            tree = ast.parse(source)
     except SyntaxError:
         return []
 

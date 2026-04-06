@@ -155,6 +155,8 @@ def construct_successful_function_run_injection_prompt(invoke_results: list[dict
 
 
 def _render_assignment_value(value: object) -> str:
+    if isinstance(value, dict) and "__raw__" in value:
+        return str(value["__raw__"])
     if isinstance(value, str):
         return json.dumps(value, ensure_ascii=False)
     return repr(value)
