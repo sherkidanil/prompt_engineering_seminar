@@ -61,3 +61,13 @@ def test_root_serves_html_shell():
     assert response.status_code == 200
     assert 'text/html' in response.headers['content-type']
     assert 'Interactive Prompt Engineering Seminar' in response.text
+
+
+def test_root_places_runner_before_content():
+    manifest = load_manifest('PE_seminar.ipynb', 'hints.py')
+    client = TestClient(create_app(manifest=manifest, runner=ApiFakeRunner()))
+    response = client.get('/')
+    html = response.text
+    runner_index = html.index('class="runner-panel"')
+    content_index = html.index('class="content-panel"')
+    assert runner_index < content_index

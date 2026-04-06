@@ -42,3 +42,10 @@ def test_manifest_exposes_part9_scaffold_fields():
         'PREFILL',
         'PROMPT',
     ]
+
+
+def test_manifest_renders_markdown_html():
+    manifest = load_manifest('PE_seminar.ipynb', 'hints.py')
+    block = manifest.block('part-1-examples')
+    assert "<h3>Examples</h3>" in block.instructions_html
+    assert "<code>shift+enter</code>" in block.instructions_html

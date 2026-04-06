@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 import ast
+import html
 import importlib.util
 import re
 import warnings
 from pathlib import Path
 from types import ModuleType
 
+import markdown
 import nbformat
 
 from interactive_seminar.schemas import Block, BlockField, Part, SeminarManifest
@@ -154,10 +156,13 @@ def _build_block(
         notebook_path=str(notebook_file),
         notebook_cell_indexes=notebook_cell_indexes,
         instructions_markdown="\n\n".join(part for part in instructions if part),
+        instructions_html=_render_markdown("\n\n".join(part for part in instructions if part)),
         editable_fields=editable_fields,
         readonly_fields=readonly_fields,
         hint=hint_text,
+        hint_html=_render_markdown(hint_text) if hint_text else None,
         solution=solution_text,
+        solution_html=_render_markdown(solution_text) if solution_text else None,
     )
 
 
@@ -261,4 +266,13 @@ def _build_tool_use_demo_block(notebook, notebook_file: Path) -> Block:
         notebook_path=str(notebook_file),
         notebook_cell_indexes=runtime_indexes,
         instructions_markdown=instructions,
+        instructions_html=_render_markdown(instructions),
+    )
+
+
+def _render_markdown(text: str) -> str:
+    safe_text = html.escape(text, quote=False)
+    return markdown.markdown(
+        safe_text,
+        extensions=["fenced_code", "tables", "sane_lists"],
     )

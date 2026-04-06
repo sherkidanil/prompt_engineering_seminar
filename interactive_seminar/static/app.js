@@ -83,7 +83,7 @@ function renderBlock() {
   content.innerHTML = `
     <p class="eyebrow">${escapeHtml(block.kind)}</p>
     <h2>${escapeHtml(block.title)}</h2>
-    <div class="instructions">${escapeHtml(block.instructions_markdown || "No instructions for this block.")}</div>
+    <div class="instructions">${block.instructions_html || "<p>No instructions for this block.</p>"}</div>
   `;
 
   const runner = document.getElementById("block-runner");
@@ -119,12 +119,12 @@ function renderBlock() {
     ${readonlyFields ? `<div class="readonly-card"><h3>Read-only Context</h3>${readonlyFields}</div>` : ""}
     ${
       block.hint
-        ? `<div class="hint-card"><h3>Hint</h3><div class="instructions">${escapeHtml(block.hint)}</div></div>`
+        ? `<div class="hint-card"><h3>Hint</h3><div class="instructions">${block.hint_html || ""}</div></div>`
         : ""
     }
     ${
       block.solution
-        ? `<div class="solution-card"><h3>Possible Solution</h3><div class="output-block">${escapeHtml(block.solution)}</div></div>`
+        ? `<div class="solution-card"><h3>Possible Solution</h3><div class="instructions">${block.solution_html || ""}</div></div>`
         : ""
     }
     <div id="run-result"></div>

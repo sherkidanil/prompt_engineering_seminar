@@ -16,10 +16,13 @@ class Block(BaseModel):
     notebook_path: str = ""
     notebook_cell_indexes: list[int] = Field(default_factory=list)
     instructions_markdown: str
+    instructions_html: str = ""
     editable_fields: list[BlockField] = Field(default_factory=list)
     readonly_fields: list[BlockField] = Field(default_factory=list)
     hint: str | None = None
+    hint_html: str | None = None
     solution: str | None = None
+    solution_html: str | None = None
 
 
 class Part(BaseModel):
