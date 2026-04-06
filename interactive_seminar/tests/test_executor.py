@@ -50,6 +50,23 @@ def test_execute_graded_block_returns_grade():
     assert result.grade.passed is True
 
 
+def test_execute_graded_block_accepts_unquoted_raw_string_override():
+    manifest = load_manifest('PE_seminar.ipynb', 'hints.py')
+    block = manifest.block('exercise-1-1-counting-to-three')
+
+    result = execute_block(
+        block,
+        {'PROMPT': {'__raw__': 'Count to 3.'}},
+        FakeRunner(),
+        credentials='test-key',
+        model='GigaChat',
+    )
+
+    assert result.prompt_preview == 'Count to 3.'
+    assert result.response == '1 2 3'
+    assert result.grade.passed is True
+
+
 def test_execute_open_block_returns_compiled_prompt():
     manifest = load_manifest('PE_seminar.ipynb', 'hints.py')
     block = manifest.block('exercise-9-2-codebot')

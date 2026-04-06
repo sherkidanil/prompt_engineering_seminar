@@ -119,7 +119,7 @@ function renderBlock() {
     ${readonlyFields ? `<div class="readonly-card"><h3>Read-only Context</h3>${readonlyFields}</div>` : ""}
     ${
       block.hint
-        ? `<div class="hint-card"><h3>Hint</h3><div class="instructions">${block.hint_html || ""}</div></div>`
+        ? `<details class="hint-card"><summary>Hint</summary><div class="instructions details-body">${block.hint_html || ""}</div></details>`
         : ""
     }
     ${

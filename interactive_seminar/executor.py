@@ -43,7 +43,7 @@ def apply_assignment_overrides(source: str, overrides: dict[str, object]) -> str
             continue
         start = _line_col_to_offset(lines, node.lineno, node.col_offset)
         end = _line_col_to_offset(lines, node.end_lineno, node.end_col_offset)
-        replacement = f"{name} = {_render_assignment_value(overrides[name])}"
+        replacement = f"{name} = {_render_assignment_value(overrides[name], original_expr=node.value)}"
         replacements.append((start, end, replacement))
 
     updated = source
@@ -234,12 +234,32 @@ def construct_successful_function_run_injection_prompt(invoke_results: list[dict
     return constructed_prompt
 
 
-def _render_assignment_value(value: object) -> str:
+def _render_assignment_value(value: object, *, original_expr: ast.expr | None = None) -> str:
     if isinstance(value, dict) and "__raw__" in value:
-        return str(value["__raw__"])
+        raw_value = str(value["__raw__"])
+        if _needs_string_quoting(raw_value, original_expr):
+            return json.dumps(raw_value, ensure_ascii=False)
+        return raw_value
     if isinstance(value, str):
         return json.dumps(value, ensure_ascii=False)
     return repr(value)
+
+
+def _needs_string_quoting(raw_value: str, original_expr: ast.expr | None) -> bool:
+    if not isinstance(original_expr, ast.Constant) or not isinstance(original_expr.value, str):
+        return False
+    try:
+        parsed = ast.parse(f"__interactive_value__ = {raw_value}")
+    except SyntaxError:
+        return True
+
+    if not parsed.body or not isinstance(parsed.body[0], ast.Assign):
+        return True
+    assignment = parsed.body[0]
+    return not (
+        isinstance(assignment.value, ast.Constant)
+        and isinstance(assignment.value.value, str)
+    )
 
 
 def _as_text(value: object) -> str | None:

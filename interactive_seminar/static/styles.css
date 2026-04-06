@@ -240,6 +240,33 @@ textarea {
   margin-bottom: 10px;
 }
 
+.hint-card summary {
+  cursor: pointer;
+  font-family: "Space Grotesk", "Segoe UI", sans-serif;
+  font-size: 1.1rem;
+  font-weight: 700;
+  list-style: none;
+}
+
+.hint-card summary::-webkit-details-marker {
+  display: none;
+}
+
+.hint-card summary::before {
+  color: var(--accent);
+  content: "+";
+  display: inline-block;
+  margin-right: 8px;
+}
+
+.hint-card[open] summary::before {
+  content: "-";
+}
+
+.details-body {
+  margin-top: 12px;
+}
+
 .output-block {
   background: #191512;
   border-radius: 12px;
