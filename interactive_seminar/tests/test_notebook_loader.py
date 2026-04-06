@@ -46,6 +46,15 @@ def test_manifest_exposes_part9_scaffold_fields():
 
 def test_manifest_renders_markdown_html():
     manifest = load_manifest('PE_seminar.ipynb', 'hints.py')
-    block = manifest.block('part-1-examples')
+    block = manifest.block('part-1-example-1')
     assert "<h3>Examples</h3>" in block.instructions_html
     assert "<code>shift+enter</code>" in block.instructions_html
+
+
+def test_manifest_splits_generic_examples_into_individual_blocks():
+    manifest = load_manifest('PE_seminar.ipynb', 'hints.py')
+    part_1_titles = [block.title for block in manifest.parts[0].blocks]
+    assert 'Part 1 Example 1' in part_1_titles
+    assert 'Part 1 Example 2' in part_1_titles
+    assert 'Part 1 Example 3' in part_1_titles
+    assert 'Part 1 System Prompt Example' in part_1_titles

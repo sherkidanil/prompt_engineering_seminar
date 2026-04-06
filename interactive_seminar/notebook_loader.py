@@ -71,13 +71,11 @@ def load_manifest(notebook_path: str, hints_path: str) -> SeminarManifest:
                 next_index = _find_next_block_boundary(notebook.cells, index + 1)
                 section_indexes = list(range(index, next_index))
                 section_cells = [(i, notebook.cells[i]) for i in section_indexes]
-                current_part.blocks.append(
-                    _build_block(
-                        f"{current_part.title} Examples",
+                current_part.blocks.extend(
+                    _build_generic_example_blocks(
+                        current_part.title,
                         section_cells,
-                        hints_module,
                         notebook_file,
-                        kind_override="example_section",
                     )
                 )
                 index = next_index
@@ -164,6 +162,57 @@ def _build_block(
         solution=solution_text,
         solution_html=_render_markdown(solution_text) if solution_text else None,
     )
+
+
+def _build_generic_example_blocks(
+    part_title: str,
+    section_cells: list[tuple[int, object]],
+    notebook_file: Path,
+) -> list[Block]:
+    blocks: list[Block] = []
+    pending_markdown: list[str] = []
+    example_number = 1
+    previous_was_code = False
+
+    for cell_index, cell in section_cells:
+        if cell.cell_type == "markdown":
+            markdown_text = cell.source.strip()
+            if previous_was_code:
+                pending_markdown = []
+            pending_markdown.append(markdown_text)
+            previous_was_code = False
+            continue
+
+        if cell.cell_type != "code":
+            continue
+
+        instructions_markdown = "\n\n".join(part for part in pending_markdown if part)
+        title = _generic_example_title(part_title, example_number, pending_markdown)
+        editable_fields: list[BlockField] = []
+        readonly_fields: list[BlockField] = []
+        for field in _extract_assignment_fields(cell.source):
+            if field.editable:
+                editable_fields.append(field)
+            else:
+                readonly_fields.append(field)
+
+        blocks.append(
+            Block(
+                id=_slugify(title),
+                title=title,
+                kind="example",
+                notebook_path=str(notebook_file),
+                notebook_cell_indexes=[cell_index],
+                instructions_markdown=instructions_markdown,
+                instructions_html=_render_markdown(instructions_markdown),
+                editable_fields=editable_fields,
+                readonly_fields=readonly_fields,
+            )
+        )
+        example_number += 1
+        previous_was_code = True
+
+    return blocks
 
 
 def _extract_notebook_title(cells: list[object]) -> str:
@@ -276,3 +325,12 @@ def _render_markdown(text: str) -> str:
         safe_text,
         extensions=["fenced_code", "tables", "sane_lists"],
     )
+
+
+def _generic_example_title(part_title: str, example_number: int, pending_markdown: list[str]) -> str:
+    for markdown_text in reversed(pending_markdown):
+        for line in markdown_text.splitlines():
+            stripped = line.strip()
+            if stripped.startswith("#### "):
+                return f"{part_title} {stripped[5:].strip()}"
+    return f"{part_title} Example {example_number}"

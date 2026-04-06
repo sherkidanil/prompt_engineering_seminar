@@ -66,9 +66,9 @@ def test_execute_open_block_returns_compiled_prompt():
     assert result.grade is None
 
 
-def test_execute_example_section_bootstraps_notebook_chat_symbols():
+def test_execute_single_example_bootstraps_notebook_chat_symbols():
     manifest = load_manifest('PE_seminar.ipynb', 'hints.py')
-    block = manifest.block('part-1-examples')
+    block = manifest.block('part-1-example-1')
 
     result = execute_block(
         block,
@@ -82,7 +82,7 @@ def test_execute_example_section_bootstraps_notebook_chat_symbols():
     )
 
     assert 'NameError' not in result.stdout
-    assert 'unhandled' in result.stdout
+    assert result.stdout.strip() == 'unhandled'
     assert result.response == 'unhandled'
 
 
