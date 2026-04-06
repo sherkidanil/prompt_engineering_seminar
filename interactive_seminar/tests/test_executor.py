@@ -83,6 +83,7 @@ def test_execute_example_section_bootstraps_notebook_chat_symbols():
 
     assert 'NameError' not in result.stdout
     assert 'unhandled' in result.stdout
+    assert result.response == 'unhandled'
 
 
 class FakeToolRunner:

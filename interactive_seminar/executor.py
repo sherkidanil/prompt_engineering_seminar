@@ -65,7 +65,13 @@ def execute_block(
         raise FileNotFoundError(f"Notebook file not found: {notebook_path}")
 
     notebook = nbformat.read(notebook_path, as_version=4)
-    client = _NotebookClientProxy(runner, credentials=credentials, model=model)
+    execution_state = {"last_model_text": None}
+    client = _NotebookClientProxy(
+        runner,
+        execution_state,
+        credentials=credentials,
+        model=model,
+    )
     namespace = {
         "__name__": "__interactive_seminar__",
         "re": re,
@@ -77,7 +83,7 @@ def execute_block(
     }
 
     def get_completion(prompt_or_messages, system_prompt: str = "", prefill: str = "", stop_sequences=None):
-        return runner.run(
+        text = runner.run(
             credentials=credentials,
             model=model,
             prompt_or_messages=prompt_or_messages,
@@ -85,6 +91,8 @@ def execute_block(
             prefill=prefill,
             stop_sequences=stop_sequences,
         )
+        execution_state["last_model_text"] = text
+        return text
 
     namespace["get_completion"] = get_completion
     stdout_buffer = io.StringIO()
@@ -98,7 +106,13 @@ def execute_block(
                 continue
             exec(compile(source, f"{notebook_path.name}:{cell_index}", "exec"), namespace)
 
-    response = namespace.get("response") or namespace.get("final_response") or namespace.get("function_calling_response", "")
+    response = (
+        execution_state.get("last_model_text")
+        or namespace.get("final_response")
+        or namespace.get("function_calling_response")
+        or namespace.get("response")
+        or ""
+    )
     grade_result = None
     grader = namespace.get("grade_exercise")
     if callable(grader) and response != "":
@@ -169,8 +183,9 @@ class _NotebookResponse:
 
 
 class _NotebookClientProxy:
-    def __init__(self, runner, *, credentials: str, model: str):
+    def __init__(self, runner, execution_state: dict[str, object], *, credentials: str, model: str):
         self._runner = runner
+        self._execution_state = execution_state
         self._credentials = credentials
         self._model = model
 
@@ -187,6 +202,7 @@ class _NotebookClientProxy:
             prefill="",
             stop_sequences=None,
         )
+        self._execution_state["last_model_text"] = text
         return _NotebookResponse(choices=[_NotebookChoice(message=_NotebookChoiceMessage(content=text))])
 
 
