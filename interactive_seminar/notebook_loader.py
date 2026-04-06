@@ -59,6 +59,11 @@ def load_manifest(notebook_path: str, hints_path: str) -> SeminarManifest:
                 index += 1
                 continue
 
+            if current_part and current_part.title == "Part 11" and source.startswith("### Examples"):
+                current_part.blocks.append(_build_tool_use_demo_block(notebook, notebook_file))
+                index = 228
+                continue
+
             block_title = _match_first_line(EXERCISE_HEADING_RE, source) or _match_first_line(EXAMPLE_HEADING_RE, source)
             if current_part and block_title:
                 next_index = _find_next_block_boundary(notebook.cells, index + 1)
@@ -219,3 +224,21 @@ def _extract_assignment_fields(source: str) -> list[BlockField]:
             )
         )
     return fields
+
+
+def _build_tool_use_demo_block(notebook, notebook_file: Path) -> Block:
+    instruction_indexes = [212, 214, 216, 218, 220, 222, 224]
+    runtime_indexes = [213, 215, 217, 219, 221, 223, 225]
+    instructions = "\n\n".join(
+        notebook.cells[index].source.strip()
+        for index in instruction_indexes
+        if notebook.cells[index].cell_type == "markdown"
+    )
+    return Block(
+        id="tool-use-calculator-demo",
+        title="Tool Use Calculator Demo",
+        kind="tool_use_demo",
+        notebook_path=str(notebook_file),
+        notebook_cell_indexes=runtime_indexes,
+        instructions_markdown=instructions,
+    )

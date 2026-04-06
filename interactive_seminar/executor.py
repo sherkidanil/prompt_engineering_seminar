@@ -91,11 +91,25 @@ def execute_block(
                 continue
             exec(compile(source, f"{notebook_path.name}:{cell_index}", "exec"), namespace)
 
-    response = namespace.get("response", "")
+    response = namespace.get("response") or namespace.get("final_response") or namespace.get("function_calling_response", "")
     grade_result = None
     grader = namespace.get("grade_exercise")
     if callable(grader) and response != "":
         grade_result = GradeResult(passed=bool(grader(response)))
+
+    tool_trace = None
+    if block.kind == "tool_use_demo" or namespace.get("function_calling_response") is not None:
+        tool_trace = {
+            "first_response": _as_text(namespace.get("function_calling_response")) or "",
+            "tool_inputs": {
+                "first_operand": _as_text(namespace.get("first_operand")),
+                "second_operand": _as_text(namespace.get("second_operand")),
+                "operator": _as_text(namespace.get("operator")),
+            },
+            "tool_result": _as_text(namespace.get("result")),
+            "function_results": _as_text(namespace.get("function_results")) or "",
+            "final_response": _as_text(namespace.get("final_response")) or "",
+        }
 
     return ExecutionResult(
         prompt_preview=_as_text(namespace.get("PROMPT")),
@@ -104,11 +118,40 @@ def execute_block(
         response=_as_text(response) or "",
         stdout=stdout_buffer.getvalue(),
         grade=grade_result,
+        tool_trace=tool_trace,
     )
 
 
 def _line_col_to_offset(lines: list[str], lineno: int, col_offset: int) -> int:
     return sum(len(line) for line in lines[: lineno - 1]) + col_offset
+
+
+def find_parameter(message: str, parameter_name: str) -> str | None:
+    pattern = re.compile(
+        rf'name="{re.escape(parameter_name)}">\s*(.*?)\s*</parameter>',
+        re.DOTALL,
+    )
+    match = pattern.search(message)
+    if not match:
+        return None
+    return match.group(1)
+
+
+def construct_successful_function_run_injection_prompt(invoke_results: list[dict[str, object]]) -> str:
+    constructed_prompt = (
+        "<function_results>\n"
+        + "\n".join(
+            (
+                f"<result>\n"
+                f"<tool_name>{result['tool_name']}</tool_name>\n"
+                f"<stdout>\n{result['tool_result']}\n</stdout>\n"
+                f"</result>"
+            )
+            for result in invoke_results
+        )
+        + "\n</function_results>"
+    )
+    return constructed_prompt
 
 
 def _render_assignment_value(value: object) -> str:

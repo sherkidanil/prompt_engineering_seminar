@@ -64,3 +64,70 @@ def test_execute_open_block_returns_compiled_prompt():
 
     assert 'You are Codebot.' in result.prompt_preview
     assert result.grade is None
+
+
+class FakeToolRunner:
+    def __init__(self):
+        self.calls = 0
+
+    def run(
+        self,
+        *,
+        credentials,
+        model,
+        prompt_or_messages,
+        system_prompt='',
+        prefill='',
+        stop_sequences=None,
+    ):
+        self.calls += 1
+        if self.calls == 1:
+            return (
+                '<function_calls><invoke name="calculator">'
+                '<antml:parameter name="first_operand">2</parameter>'
+                '<antml:parameter name="second_operand">6</parameter>'
+                '<antml:parameter name="operator">*</parameter>'
+                '</invoke>'
+            )
+        return '12'
+
+
+
+def test_find_parameter_extracts_tool_arguments():
+    from interactive_seminar.executor import find_parameter
+
+    message = (
+        '<function_calls><invoke name="calculator">'
+        '<antml:parameter name="first_operand">2</parameter></invoke>'
+    )
+    assert find_parameter(message, 'first_operand') == '2'
+
+
+
+def test_construct_successful_function_run_injection_prompt_formats_results():
+    from interactive_seminar.executor import construct_successful_function_run_injection_prompt
+
+    prompt = construct_successful_function_run_injection_prompt([
+        {'tool_name': 'calculator', 'tool_result': 12}
+    ])
+    assert '<function_results>' in prompt
+    assert '<tool_name>calculator</tool_name>' in prompt
+    assert '<stdout>\n12\n</stdout>' in prompt
+
+
+
+def test_execute_tool_use_demo_returns_intermediate_trace():
+    manifest = load_manifest('PE_seminar.ipynb', 'hints.py')
+    block = manifest.block('tool-use-calculator-demo')
+
+    result = execute_block(
+        block,
+        {},
+        FakeToolRunner(),
+        credentials='test-key',
+        model='GigaChat',
+    )
+
+    assert result.tool_trace['first_response'].startswith('<function_calls>')
+    assert result.tool_trace['function_results'].startswith('<function_results>')
+    assert result.response == '12'
