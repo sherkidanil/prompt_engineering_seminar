@@ -327,7 +327,63 @@ def _extract_assignment_fields_with_context(
                 ),
             )
         )
-    return fields
+    if fields:
+        return fields
+    return _extract_inline_chat_fields(source)
+
+
+def _extract_inline_chat_fields(source: str) -> list[BlockField]:
+    try:
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", SyntaxWarning)
+            tree = ast.parse(source)
+    except SyntaxError:
+        return []
+
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call):
+            continue
+        if not isinstance(node.func, ast.Name) or node.func.id != "Chat":
+            continue
+        messages_keyword = next((keyword for keyword in node.keywords if keyword.arg == "messages"), None)
+        if messages_keyword is None:
+            continue
+        messages_expr = messages_keyword.value
+        messages_source = ast.get_source_segment(source, messages_expr) or ""
+        if not isinstance(messages_expr, ast.List):
+            continue
+
+        user_message_contents: list[ast.expr] = []
+        for message_expr in messages_expr.elts:
+            if not isinstance(message_expr, ast.Call):
+                continue
+            if not isinstance(message_expr.func, ast.Name) or message_expr.func.id != "Messages":
+                continue
+            role_keyword = next((keyword for keyword in message_expr.keywords if keyword.arg == "role"), None)
+            content_keyword = next((keyword for keyword in message_expr.keywords if keyword.arg == "content"), None)
+            if role_keyword is None or content_keyword is None:
+                continue
+            if _is_user_role_expr(role_keyword.value):
+                user_message_contents.append(content_keyword.value)
+
+        if len(messages_expr.elts) == 1 and len(user_message_contents) == 1:
+            prompt_source = ast.get_source_segment(source, user_message_contents[0]) or ""
+            if prompt_source:
+                return [BlockField(name="PROMPT", value=prompt_source.strip(), editable=True)]
+
+        if messages_source:
+            return [BlockField(name="MESSAGES", value=messages_source.strip(), editable=True)]
+
+    return []
+
+
+def _is_user_role_expr(value: ast.expr) -> bool:
+    return (
+        isinstance(value, ast.Attribute)
+        and isinstance(value.value, ast.Name)
+        and value.value.id == "MessagesRole"
+        and value.attr == "USER"
+    ) or (isinstance(value, ast.Constant) and value.value == "user")
 
 
 def _should_expose_assignment(
@@ -388,7 +444,7 @@ def _assigned_names(source: str) -> set[str]:
         return set()
 
     assigned: set[str] = set()
-    for node in tree.body:
+    for node in ast.walk(tree):
         if isinstance(node, ast.Assign):
             for target in node.targets:
                 if isinstance(target, ast.Name):

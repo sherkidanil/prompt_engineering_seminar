@@ -52,6 +52,80 @@ def apply_assignment_overrides(source: str, overrides: dict[str, object]) -> str
     return updated
 
 
+def apply_inline_chat_overrides(source: str, overrides: dict[str, object]) -> str:
+    if not overrides or not ({"PROMPT", "MESSAGES"} & set(overrides)):
+        return source
+    try:
+        tree = ast.parse(source)
+    except SyntaxError:
+        return source
+
+    lines = source.splitlines(keepends=True)
+    replacements: list[tuple[int, int, str]] = []
+    has_prompt_assignment = any(
+        isinstance(node, ast.Assign)
+        and len(node.targets) == 1
+        and isinstance(node.targets[0], ast.Name)
+        and node.targets[0].id == "PROMPT"
+        for node in tree.body
+    )
+
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call):
+            continue
+        if not isinstance(node.func, ast.Name) or node.func.id != "Chat":
+            continue
+
+        messages_keyword = next((keyword for keyword in node.keywords if keyword.arg == "messages"), None)
+        if messages_keyword is None:
+            continue
+
+        if "MESSAGES" in overrides:
+            start = _line_col_to_offset(lines, messages_keyword.value.lineno, messages_keyword.value.col_offset)
+            end = _line_col_to_offset(lines, messages_keyword.value.end_lineno, messages_keyword.value.end_col_offset)
+            replacements.append(
+                (
+                    start,
+                    end,
+                    _render_assignment_value(overrides["MESSAGES"], original_expr=messages_keyword.value),
+                )
+            )
+            continue
+
+        if "PROMPT" not in overrides or has_prompt_assignment:
+            continue
+        if not isinstance(messages_keyword.value, ast.List) or len(messages_keyword.value.elts) != 1:
+            continue
+
+        message_expr = messages_keyword.value.elts[0]
+        if not isinstance(message_expr, ast.Call):
+            continue
+        if not isinstance(message_expr.func, ast.Name) or message_expr.func.id != "Messages":
+            continue
+
+        role_keyword = next((keyword for keyword in message_expr.keywords if keyword.arg == "role"), None)
+        content_keyword = next((keyword for keyword in message_expr.keywords if keyword.arg == "content"), None)
+        if role_keyword is None or content_keyword is None:
+            continue
+        if not _is_user_role_expr(role_keyword.value):
+            continue
+
+        start = _line_col_to_offset(lines, content_keyword.value.lineno, content_keyword.value.col_offset)
+        end = _line_col_to_offset(lines, content_keyword.value.end_lineno, content_keyword.value.end_col_offset)
+        replacements.append(
+            (
+                start,
+                end,
+                _render_assignment_value(overrides["PROMPT"], original_expr=content_keyword.value),
+            )
+        )
+
+    updated = source
+    for start, end, replacement in sorted(replacements, reverse=True):
+        updated = updated[:start] + replacement + updated[end:]
+    return updated
+
+
 def execute_block(
     block: Block,
     overrides: dict[str, object],
@@ -102,6 +176,7 @@ def execute_block(
             cell = notebook.cells[cell_index]
             source = sanitize_cell_source(cell.source)
             source = apply_assignment_overrides(source, overrides)
+            source = apply_inline_chat_overrides(source, overrides)
             if not source.strip():
                 continue
             exec(compile(source, f"{notebook_path.name}:{cell_index}", "exec"), namespace)
@@ -134,9 +209,7 @@ def execute_block(
 
     return ExecutionResult(
         prompt_preview=_as_text(
-            namespace.get("PROMPT")
-            or namespace.get("prompt")
-            or namespace.get("messages")
+            _prompt_preview_value(namespace)
         ),
         system_prompt=_as_text(namespace.get("SYSTEM_PROMPT") or namespace.get("system_prompt")),
         prefill=_as_text(namespace.get("PREFILL") or namespace.get("prefill")),
@@ -151,10 +224,31 @@ def _line_col_to_offset(lines: list[str], lineno: int, col_offset: int) -> int:
     return sum(len(line) for line in lines[: lineno - 1]) + col_offset
 
 
+def _prompt_preview_value(namespace: dict[str, object]) -> object:
+    direct_value = namespace.get("PROMPT") or namespace.get("prompt") or namespace.get("messages")
+    if direct_value is not None:
+        return direct_value
+    chat = namespace.get("chat")
+    if isinstance(chat, NotebookChat):
+        if len(chat.messages) == 1 and chat.messages[0].role == NotebookMessagesRole.USER:
+            return chat.messages[0].content
+        return [{"role": message.role, "content": message.content} for message in chat.messages]
+    return None
+
+
 class NotebookMessagesRole:
     SYSTEM = "system"
     USER = "user"
     ASSISTANT = "assistant"
+
+
+def _is_user_role_expr(value: ast.expr) -> bool:
+    return (
+        isinstance(value, ast.Attribute)
+        and isinstance(value.value, ast.Name)
+        and value.value.id == "MessagesRole"
+        and value.attr == "USER"
+    ) or (isinstance(value, ast.Constant) and value.value == "user")
 
 
 @dataclass

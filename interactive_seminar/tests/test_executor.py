@@ -150,6 +150,22 @@ def test_execute_single_example_bootstraps_notebook_chat_symbols():
     assert result.response == 'unhandled'
 
 
+def test_execute_inline_chat_prompt_override_updates_messages():
+    manifest = load_manifest('PE_seminar.ipynb', 'hints.py')
+    block = manifest.block('part-1-example-4')
+
+    result = execute_block(
+        block,
+        {'PROMPT': {'__raw__': 'How old is the universe?'}},
+        EchoRunner(),
+        credentials='test-key',
+        model='GigaChat',
+    )
+
+    assert 'How old is the universe?' in result.prompt_preview
+    assert 'How old is the universe?' in result.response
+
+
 class FakeToolRunner:
     def __init__(self):
         self.calls = 0

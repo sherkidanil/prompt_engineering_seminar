@@ -73,3 +73,17 @@ def test_manifest_exposes_part10_context_fields():
     assert 'first_user' in editable_names
     assert 'second_user' in editable_names
     assert 'prefill' in editable_names
+
+
+def test_manifest_exposes_inline_chat_prompt_for_part1_example4():
+    manifest = load_manifest('PE_seminar.ipynb', 'hints.py')
+    block = manifest.block('part-1-example-4')
+    assert [(field.name, field.value) for field in block.editable_fields] == [
+        ('PROMPT', '"Hi GigaChat, how are you?"')
+    ]
+
+
+def test_manifest_exposes_inline_chat_messages_for_part1_example5():
+    manifest = load_manifest('PE_seminar.ipynb', 'hints.py')
+    block = manifest.block('part-1-example-5')
+    assert [field.name for field in block.editable_fields] == ['MESSAGES']
