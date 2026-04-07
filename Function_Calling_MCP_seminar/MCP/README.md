@@ -32,6 +32,12 @@ Install dependencies:
 pip install -r requirements.txt
 ```
 
+This local file forwards to the repository-level `requirements_mcp.txt`, so from the repo root you can also run:
+
+```bash
+pip install -r requirements_mcp.txt
+```
+
 Create `.env` file (you can copy `.env.example`) and set credentials:
 
 ```bash

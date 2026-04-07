@@ -1,7 +1,1 @@
-langchain-gigachat>=0.3,<0.4
-langchain-mcp-adapters==0.1.14
-langgraph>=1.0,<2.0
-mcp>=1.9.2
-python-dotenv>=1.0
-rich>=13.0
-httpx>=0.28
+-r ../../requirements_mcp.txt
