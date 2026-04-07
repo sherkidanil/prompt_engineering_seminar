@@ -1,0 +1,21 @@
+# RAG seminar notebook
+jupyter
+ipykernel
+python-dotenv
+gigachat==0.2.0
+langchain-classic==1.0.3
+langchain-community==0.4.1
+langchain-core==1.2.26
+langchain-huggingface==1.2.1
+langchain-gigachat==0.5.0
+langchain-text-splitters==1.1.1
+faiss-cpu
+sentence-transformers
+rank_bm25
+beautifulsoup4
+requests
+unstructured[all-docs]
+pypdf==6.9.2
+pdfminer.six
+pi_heif
+pandas
