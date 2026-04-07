@@ -1,17 +1,25 @@
-# Prompt Engineering: GigaChat Seminar
+# GigaChat Seminar Repository
 
-A hands-on prompt engineering seminar for GigaChat, now available in two formats:
+This repository now contains three seminar tracks:
 
-- the original Jupyter notebook flow in [PE_seminar.ipynb](/Users/daniilserki/Documents/Workspace/AIMLEI/prompt_engineering_seminar/.worktrees/interactive-seminar/PE_seminar.ipynb)
-- a local interactive web app powered by the same notebook content
+- prompt engineering in [PE_seminar.ipynb](/Users/daniilserki/Documents/Workspace/AIMLEI/prompt_engineering_seminar/.worktrees/interactive-seminar/PE_seminar.ipynb)
+- RAG in [RAG_seminar.ipynb](/Users/daniilserki/Documents/Workspace/AIMLEI/prompt_engineering_seminar/.worktrees/interactive-seminar/RAG_seminar.ipynb)
+- function calling + MCP in `Function_Calling_MCP_seminar/`
+
+The prompt engineering seminar is also available as a local interactive web app powered by the same notebook content.
 
 ## Contents
 
 - `PE_seminar.ipynb` — source notebook for the prompt engineering seminar
+- `RAG_seminar.ipynb` — source notebook for the RAG seminar
+- `Function_Calling_MCP_seminar/` — function calling and MCP seminar materials
 - `hints.py` — exercise hints and solution snippets
 - `interactive_seminar/` — local FastAPI app, notebook parser, executor, frontend assets, and tests
 - `run_interactive_seminar.py` — local web server entrypoint
-- `requirements.txt` — Python dependencies
+- `requirements.txt` — install every seminar profile into one environment
+- `requirements_prompt_engineering.txt` — prompt engineering notebook + interactive UI dependencies
+- `requirements_rag.txt` — RAG seminar dependencies
+- `requirements_mcp.txt` — function calling + MCP seminar dependencies
 
 ## Install
 
@@ -19,6 +27,20 @@ Create and activate a virtual environment, then install dependencies:
 
 ```bash
 pip install -r requirements.txt
+```
+
+If you only need one seminar profile, install it directly:
+
+```bash
+pip install -r requirements_prompt_engineering.txt
+pip install -r requirements_rag.txt
+pip install -r requirements_mcp.txt
+```
+
+For the RAG seminar, you may also need browser binaries after installation:
+
+```bash
+playwright install
 ```
 
 ## Run The Interactive App

@@ -1,0 +1,19 @@
+# RAG seminar notebook
+jupyter
+ipykernel
+gigachat
+python-dotenv
+langchain
+langchain-community
+langchain-core
+langchain-huggingface
+faiss-cpu
+sentence-transformers
+rank_bm25
+beautifulsoup4
+requests
+playwright
+unstructured[all-docs]
+pdfminer.six
+pi_heif
+pandas

@@ -1,0 +1,12 @@
+# Prompt engineering notebook + interactive seminar UI
+jupyter
+ipykernel
+gigachat
+python-dotenv
+fastapi
+uvicorn
+jinja2
+nbformat
+markdown
+pytest
+httpx
