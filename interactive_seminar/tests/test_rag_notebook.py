@@ -93,3 +93,12 @@ def test_csv_rag_section_builds_ensemble_retriever_before_qa_chain():
     assert cell_source.index('ensemble_retriever = EnsembleRetriever(') < cell_source.index(
         'qa = RetrievalQA.from_chain_type('
     )
+
+
+def test_colab_playwright_setup_installs_system_deps_and_sets_user_agent():
+    notebook = _load_notebook()
+    playwright_install_cell = ''.join(notebook['cells'][5]['source'])
+    parser_cell = ''.join(notebook['cells'][8]['source'])
+
+    assert '!playwright install --with-deps chromium' in playwright_install_cell
+    assert "os.environ.setdefault('USER_AGENT'" in parser_cell
