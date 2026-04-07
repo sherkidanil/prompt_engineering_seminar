@@ -39,6 +39,11 @@ GENERIC_CONTEXT_FIELD_NAMES = {
     "second_user",
     "first_response",
     "prefill",
+    "system_prompt_tools_general_explanation",
+    "system_prompt_tools_specific_tools",
+    "multiplication_message",
+    "non_multiplication_message",
+    "stop_sequences",
 }
 
 
@@ -66,11 +71,6 @@ def load_manifest(notebook_path: str, hints_path: str) -> SeminarManifest:
                 current_part = Part(id=_slugify(part_title), title=part_title)
                 manifest.parts.append(current_part)
                 index += 1
-                continue
-
-            if current_part and current_part.title == "Part 11" and source.startswith("### Examples"):
-                current_part.blocks.append(_build_tool_use_demo_block(notebook, notebook_file))
-                index = 228
                 continue
 
             if current_part and source.startswith("### Examples"):
@@ -449,6 +449,8 @@ def _assigned_names(source: str) -> set[str]:
             for target in node.targets:
                 if isinstance(target, ast.Name):
                     assigned.add(target.id)
+        elif isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+            assigned.add(node.name)
     return assigned
 
 

@@ -87,3 +87,33 @@ def test_manifest_exposes_inline_chat_messages_for_part1_example5():
     manifest = load_manifest('PE_seminar.ipynb', 'hints.py')
     block = manifest.block('part-1-example-5')
     assert [field.name for field in block.editable_fields] == ['MESSAGES']
+
+
+def test_manifest_splits_part11_examples_and_exposes_tool_fields():
+    manifest = load_manifest('PE_seminar.ipynb', 'hints.py')
+    part_11_titles = [block.title for block in manifest.parts[10].blocks]
+    assert 'Part 11 Example 1' in part_11_titles
+    assert 'Part 11 Example 8' in part_11_titles
+
+    block_1 = manifest.block('part-11-example-1')
+    assert [field.name for field in block_1.editable_fields] == [
+        'system_prompt_tools_general_explanation'
+    ]
+
+    block_3 = manifest.block('part-11-example-3')
+    assert [field.name for field in block_3.editable_fields] == [
+        'system_prompt_tools_general_explanation',
+        'system_prompt_tools_specific_tools',
+        'multiplication_message',
+        'stop_sequences',
+    ]
+
+    block_8 = manifest.block('part-11-example-8')
+    assert [field.name for field in block_8.editable_fields] == [
+        'system_prompt_tools_general_explanation',
+        'system_prompt_tools_specific_tools',
+        'non_multiplication_message',
+        'stop_sequences',
+    ]
+
+    assert manifest.block('part-11-example-7').notebook_cell_indexes == [213, 215, 217, 219, 221, 223, 225]

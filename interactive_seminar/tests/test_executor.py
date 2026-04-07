@@ -216,9 +216,9 @@ def test_construct_successful_function_run_injection_prompt_formats_results():
 
 
 
-def test_execute_tool_use_demo_returns_intermediate_trace():
+def test_execute_part11_final_example_returns_intermediate_trace():
     manifest = load_manifest('PE_seminar.ipynb', 'hints.py')
-    block = manifest.block('tool-use-calculator-demo')
+    block = manifest.block('part-11-example-7')
 
     result = execute_block(
         block,
