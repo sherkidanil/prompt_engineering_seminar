@@ -37,11 +37,7 @@ pip install -r requirements_rag.txt
 pip install -r requirements_mcp.txt
 ```
 
-For the RAG seminar, you may also need browser binaries after installation:
-
-```bash
-playwright install
-```
+The RAG seminar uses HTTP parsing for the initial PubMed collection step, so no extra browser setup is required after installation.
 
 ## Run The Interactive App
 

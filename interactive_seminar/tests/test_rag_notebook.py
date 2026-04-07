@@ -4,6 +4,7 @@ from pathlib import Path
 
 NOTEBOOK_PATH = Path('RAG_seminar.ipynb')
 RAG_REQUIREMENTS = Path('requirements_rag.txt')
+README_PATH = Path('README.md')
 
 
 def _load_notebook():
@@ -30,13 +31,13 @@ def test_rag_notebook_uses_colab_friendly_split_package_install_cells():
     assert 'langchain-gigachat==0.5.0' in code
     assert 'langchain-text-splitters==1.1.1' in code
     assert 'gigachat==0.2.0' in code
-    assert 'playwright==1.58.0' in code
     assert 'pypdf==6.9.2' in code
     assert 'faiss-cpu' in code
     assert 'sentence-transformers' in code
     assert 'rank_bm25' in code
     assert 'gigachain' not in code
     assert 'pydantic==1.10.13' not in code
+    assert 'playwright==1.58.0' not in code
 
 
 def test_rag_notebook_uses_current_split_import_paths():
@@ -81,9 +82,9 @@ def test_rag_requirements_follow_current_notebook_stack():
     assert 'langchain-gigachat==0.5.0' in content
     assert 'langchain-text-splitters==1.1.1' in content
     assert 'gigachat==0.2.0' in content
-    assert 'playwright==1.58.0' in content
     assert 'pypdf==6.9.2' in content
     assert 'gigachain' not in content
+    assert 'playwright' not in content
 
 
 def test_csv_rag_section_builds_ensemble_retriever_before_qa_chain():
@@ -95,10 +96,19 @@ def test_csv_rag_section_builds_ensemble_retriever_before_qa_chain():
     )
 
 
-def test_colab_playwright_setup_installs_system_deps_and_sets_user_agent():
+def test_rag_parser_uses_requests_and_beautifulsoup_without_playwright():
     notebook = _load_notebook()
-    playwright_install_cell = ''.join(notebook['cells'][5]['source'])
     parser_cell = ''.join(notebook['cells'][8]['source'])
+    parser_intro = ''.join(notebook['cells'][7]['source']) + '\n' + ''.join(notebook['cells'][8]['source'])
 
-    assert '!playwright install --with-deps chromium' in playwright_install_cell
-    assert "os.environ.setdefault('USER_AGENT'" in parser_cell
+    assert 'AsyncChromiumLoader' not in parser_cell
+    assert 'import requests' in parser_cell
+    assert "requests.get(" in parser_cell
+    assert 'BeautifulSoup' in parser_cell
+    assert "soup.find_all('a', class_='docsum-title')" in parser_cell
+    assert 'playwright' not in parser_intro.lower()
+
+
+def test_readme_no_longer_requires_playwright_for_rag():
+    readme = README_PATH.read_text()
+    assert 'playwright install' not in readme
