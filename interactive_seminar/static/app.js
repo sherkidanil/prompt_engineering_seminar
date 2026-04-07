@@ -104,19 +104,22 @@ function renderBlock() {
   const readonlyFields = (block.readonly_fields || [])
     .map(
       (field) => `
-        <details>
-          <summary>${escapeHtml(field.name)}</summary>
-          <div class="output-block">${escapeHtml(field.value || "")}</div>
-        </details>
+        <div class="field-group context-field">
+          <label class="field-label" for="field-${escapeHtml(field.name)}">
+            <span>${escapeHtml(field.name)}</span>
+            <span class="field-type">context</span>
+          </label>
+          <textarea id="field-${escapeHtml(field.name)}" data-field="${escapeHtml(field.name)}" rows="6">${escapeHtml(field.value || "")}</textarea>
+        </div>
       `
     )
     .join("");
 
   runner.innerHTML = `
     <h2>Runner</h2>
-    ${editableFields || "<p>No editable fields for this block.</p>"}
+    ${editableFields || (!readonlyFields ? "<p>No editable fields for this block.</p>" : "")}
     <button id="run-block" type="button">Run Block</button>
-    ${readonlyFields ? `<div class="readonly-card"><h3>Read-only Context</h3>${readonlyFields}</div>` : ""}
+    ${readonlyFields ? `<div class="readonly-card context-card"><h3>Context Fields</h3>${readonlyFields}</div>` : ""}
     ${
       block.hint
         ? `<details class="hint-card"><summary>Hint</summary><div class="instructions details-body">${block.hint_html || ""}</div></details>`

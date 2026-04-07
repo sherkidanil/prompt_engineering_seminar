@@ -58,3 +58,18 @@ def test_manifest_splits_generic_examples_into_individual_blocks():
     assert 'Part 1 Example 2' in part_1_titles
     assert 'Part 1 Example 3' in part_1_titles
     assert 'Part 1 System Prompt Example' in part_1_titles
+
+
+def test_manifest_resolves_part10_example_dependencies():
+    manifest = load_manifest('PE_seminar.ipynb', 'hints.py')
+    assert manifest.block('part-10-example-2').notebook_cell_indexes == [192, 194]
+    assert manifest.block('part-10-example-8').notebook_cell_indexes == [204, 206]
+
+
+def test_manifest_exposes_part10_context_fields():
+    manifest = load_manifest('PE_seminar.ipynb', 'hints.py')
+    block = manifest.block('part-10-example-8')
+    editable_names = [field.name for field in block.editable_fields]
+    assert 'first_user' in editable_names
+    assert 'second_user' in editable_names
+    assert 'prefill' in editable_names

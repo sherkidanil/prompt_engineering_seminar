@@ -34,6 +34,12 @@ EDITABLE_FIELD_NAMES = {
 SPECIAL_EDITABLE_FIELD_NAMES = {
     "system_prompt_tools_specific_tools_sql",
 }
+GENERIC_CONTEXT_FIELD_NAMES = {
+    "first_user",
+    "second_user",
+    "first_response",
+    "prefill",
+}
 
 
 def load_manifest(notebook_path: str, hints_path: str) -> SeminarManifest:
@@ -173,6 +179,8 @@ def _build_generic_example_blocks(
     pending_markdown: list[str] = []
     example_number = 1
     previous_was_code = False
+    code_cells = [(cell_index, cell) for cell_index, cell in section_cells if cell.cell_type == "code"]
+    runtime_indexes_by_cell = _resolve_generic_example_runtime_indexes(code_cells)
 
     for cell_index, cell in section_cells:
         if cell.cell_type == "markdown":
@@ -190,11 +198,22 @@ def _build_generic_example_blocks(
         title = _generic_example_title(part_title, example_number, pending_markdown)
         editable_fields: list[BlockField] = []
         readonly_fields: list[BlockField] = []
-        for field in _extract_assignment_fields(cell.source):
-            if field.editable:
-                editable_fields.append(field)
-            else:
-                readonly_fields.append(field)
+        seen_field_names: set[str] = set()
+        runtime_indexes = runtime_indexes_by_cell.get(cell_index, [cell_index])
+        runtime_cells = {runtime_cell_index: runtime_cell for runtime_cell_index, runtime_cell in code_cells}
+        for runtime_cell_index in runtime_indexes:
+            runtime_cell = runtime_cells[runtime_cell_index]
+            for field in _extract_assignment_fields_with_context(
+                runtime_cell.source,
+                extra_editable_names=GENERIC_CONTEXT_FIELD_NAMES,
+            ):
+                if field.name in seen_field_names:
+                    continue
+                seen_field_names.add(field.name)
+                if field.editable:
+                    editable_fields.append(field)
+                else:
+                    readonly_fields.append(field)
 
         blocks.append(
             Block(
@@ -202,7 +221,7 @@ def _build_generic_example_blocks(
                 title=title,
                 kind="example",
                 notebook_path=str(notebook_file),
-                notebook_cell_indexes=[cell_index],
+                notebook_cell_indexes=runtime_indexes,
                 instructions_markdown=instructions_markdown,
                 instructions_html=_render_markdown(instructions_markdown),
                 editable_fields=editable_fields,
@@ -273,6 +292,13 @@ def _slugify(text: str) -> str:
 
 
 def _extract_assignment_fields(source: str) -> list[BlockField]:
+    return _extract_assignment_fields_with_context(source, extra_editable_names=None)
+
+
+def _extract_assignment_fields_with_context(
+    source: str,
+    extra_editable_names: set[str] | None,
+) -> list[BlockField]:
     try:
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", SyntaxWarning)
@@ -287,17 +313,102 @@ def _extract_assignment_fields(source: str) -> list[BlockField]:
         if len(node.targets) != 1 or not isinstance(node.targets[0], ast.Name):
             continue
         name = node.targets[0].id
-        if not (name.isupper() or name in SPECIAL_EDITABLE_FIELD_NAMES):
+        if not _should_expose_assignment(name, node.value, extra_editable_names):
             continue
         value_source = ast.get_source_segment(source, node.value) or ""
         fields.append(
             BlockField(
                 name=name,
                 value=value_source.strip(),
-                editable=name in EDITABLE_FIELD_NAMES or name in SPECIAL_EDITABLE_FIELD_NAMES,
+                editable=(
+                    name in EDITABLE_FIELD_NAMES
+                    or name in SPECIAL_EDITABLE_FIELD_NAMES
+                    or (extra_editable_names is not None and name in extra_editable_names)
+                ),
             )
         )
     return fields
+
+
+def _should_expose_assignment(
+    name: str,
+    value: ast.expr,
+    extra_editable_names: set[str] | None,
+) -> bool:
+    if name.isupper() or name in SPECIAL_EDITABLE_FIELD_NAMES:
+        return True
+    if extra_editable_names is None or name not in extra_editable_names:
+        return False
+    return _is_context_editable_value(value)
+
+
+def _is_context_editable_value(value: ast.expr) -> bool:
+    return isinstance(value, (ast.Constant, ast.JoinedStr, ast.List, ast.Dict, ast.Tuple))
+
+
+def _resolve_generic_example_runtime_indexes(
+    code_cells: list[tuple[int, object]],
+) -> dict[int, list[int]]:
+    if not code_cells:
+        return {}
+
+    assigned_names_by_cell: dict[int, set[str]] = {}
+    dependencies_by_cell: dict[int, set[str]] = {}
+    all_defined_names: set[str] = set()
+    for cell_index, cell in code_cells:
+        assigned_names = _assigned_names(cell.source)
+        assigned_names_by_cell[cell_index] = assigned_names
+        all_defined_names.update(assigned_names)
+
+    for cell_index, cell in code_cells:
+        dependencies_by_cell[cell_index] = _loaded_names(cell.source) - assigned_names_by_cell[cell_index]
+        dependencies_by_cell[cell_index] &= all_defined_names
+
+    resolved: dict[int, list[int]] = {}
+    for position, (cell_index, _) in enumerate(code_cells):
+        needed = set(dependencies_by_cell[cell_index])
+        runtime_indexes = [cell_index]
+        for prior_index in range(position - 1, -1, -1):
+            prior_cell_index, _ = code_cells[prior_index]
+            prior_assigned = assigned_names_by_cell[prior_cell_index]
+            if not (needed & prior_assigned):
+                continue
+            runtime_indexes.append(prior_cell_index)
+            needed = (needed - prior_assigned) | dependencies_by_cell[prior_cell_index]
+        resolved[cell_index] = sorted(runtime_indexes)
+    return resolved
+
+
+def _assigned_names(source: str) -> set[str]:
+    try:
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", SyntaxWarning)
+            tree = ast.parse(source)
+    except SyntaxError:
+        return set()
+
+    assigned: set[str] = set()
+    for node in tree.body:
+        if isinstance(node, ast.Assign):
+            for target in node.targets:
+                if isinstance(target, ast.Name):
+                    assigned.add(target.id)
+    return assigned
+
+
+def _loaded_names(source: str) -> set[str]:
+    try:
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", SyntaxWarning)
+            tree = ast.parse(source)
+    except SyntaxError:
+        return set()
+
+    return {
+        node.id
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Name) and isinstance(node.ctx, ast.Load)
+    }
 
 
 def _build_tool_use_demo_block(notebook, notebook_file: Path) -> Block:

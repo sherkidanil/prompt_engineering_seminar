@@ -22,6 +22,20 @@ class FakeRunner:
         return 'unhandled'
 
 
+class EchoRunner:
+    def run(
+        self,
+        *,
+        credentials,
+        model,
+        prompt_or_messages,
+        system_prompt='',
+        prefill='',
+        stop_sequences=None,
+    ):
+        return str(prompt_or_messages)
+
+
 def test_sanitize_cell_source_removes_ipython_magics():
     source = '%store -r MODEL_NAME\nprint(MODEL_NAME)\n'
     assert sanitize_cell_source(source) == 'print(MODEL_NAME)\n'
@@ -81,6 +95,39 @@ def test_execute_open_block_returns_compiled_prompt():
 
     assert 'You are Codebot.' in result.prompt_preview
     assert result.grade is None
+
+
+def test_execute_generic_example_uses_messages_as_prompt_preview_and_prereqs():
+    manifest = load_manifest('PE_seminar.ipynb', 'hints.py')
+    block = manifest.block('part-10-example-2')
+
+    result = execute_block(
+        block,
+        {},
+        EchoRunner(),
+        credentials='test-key',
+        model='GigaChat',
+    )
+
+    assert 'Please find replacements' in result.prompt_preview
+    assert 'Name ten words' in result.prompt_preview
+    assert 'Please find replacements' in result.response
+
+
+def test_execute_block_allows_context_field_overrides():
+    manifest = load_manifest('PE_seminar.ipynb', 'hints.py')
+    block = manifest.block('part-4-example-1')
+
+    result = execute_block(
+        block,
+        {'ANIMAL': {'__raw__': '"Dog"'}},
+        EchoRunner(),
+        credentials='test-key',
+        model='GigaChat',
+    )
+
+    assert 'Dog' in result.prompt_preview
+    assert 'Dog' in result.response
 
 
 def test_execute_single_example_bootstraps_notebook_chat_symbols():

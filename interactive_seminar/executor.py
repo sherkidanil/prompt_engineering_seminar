@@ -133,9 +133,13 @@ def execute_block(
         }
 
     return ExecutionResult(
-        prompt_preview=_as_text(namespace.get("PROMPT")),
-        system_prompt=_as_text(namespace.get("SYSTEM_PROMPT")),
-        prefill=_as_text(namespace.get("PREFILL")),
+        prompt_preview=_as_text(
+            namespace.get("PROMPT")
+            or namespace.get("prompt")
+            or namespace.get("messages")
+        ),
+        system_prompt=_as_text(namespace.get("SYSTEM_PROMPT") or namespace.get("system_prompt")),
+        prefill=_as_text(namespace.get("PREFILL") or namespace.get("prefill")),
         response=_as_text(response) or "",
         stdout=stdout_buffer.getvalue(),
         grade=grade_result,
